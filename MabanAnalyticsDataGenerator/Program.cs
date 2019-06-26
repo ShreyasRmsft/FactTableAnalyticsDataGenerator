@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using MabanAnalyticsDataGenerator;
 
 namespace db_connect
 {
@@ -11,7 +12,8 @@ namespace db_connect
         static void Main(string[] args)
         {
             //GenerateFileDim();
-            FactTable.GenerateFacttable();
+            //FactTable.GenerateFacttable(args[0]);
+            FileListGenerator.GenerateListOfFiles(args[0], $"{args[0]}.txt");
         }
 
         private static void GenerateFileDim()

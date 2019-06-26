@@ -17,7 +17,7 @@ namespace db_connect
 
     public class FactTable
     {
-        public static void GenerateFacttable()
+        public static void GenerateFacttable(string repoName)
         {
             const int ProjectSK = 12345;
             const int BranchSK = 1234;
@@ -25,10 +25,8 @@ namespace db_connect
 
             Random randomNumberGenerator = new Random();
 
-            string repoName = "VSOWithoutSrc";
-
             // read from file
-            var files = File.ReadAllLines("VSOFilesWithoutSrc.txt");
+            var files = File.ReadAllLines($"{repoName}.txt");
 
             Dictionary<string, FileProps> durableSK = new Dictionary<string, FileProps>();
 
@@ -111,7 +109,11 @@ namespace db_connect
                                 fileProp.FileSK = gFileSK++;
                                 var newFile = result + day + build + branch;
 
-                                durableSK.Add(newFile, fileProp);
+                                if (!durableSK.ContainsKey(newFile))
+                                {
+                                    durableSK.Add(newFile, fileProp);
+                                }
+
                                 tempFiles.Add(newFile);
                             }
 
