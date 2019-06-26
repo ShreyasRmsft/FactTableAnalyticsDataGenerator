@@ -23,14 +23,12 @@ namespace db_connect
             const int BranchSK = 1234;
             const int BuildPipeLineSK = 123;
 
-            string repoName = "VSO";
-            string repo = @"E:\VSO\src";
+            Random randomNumberGenerator = new Random();
 
-            var files = Directory.EnumerateFiles(repo, "*.*", SearchOption.AllDirectories)
-                .Where(file => new string[] { ".cs", ".tsx", ".ts" }
-                .Contains(Path.GetExtension(file)))
-                //.Take(10)
-                .ToList();
+            string repoName = "VSOWithoutSrc";
+
+            // read from file
+            var files = File.ReadAllLines("VSOFilesWithoutSrc.txt");
 
             Dictionary<string, FileProps> durableSK = new Dictionary<string, FileProps>();
 
@@ -42,14 +40,15 @@ namespace db_connect
                 {
                     FileSK = gFileSK++,
                     FileDurableSK = gFileSK-1,
-                    TotalLines = new Random().Next(240, 300),
-                    ExecutableLines = new Random().Next(200, 220),
-                    CoveredLines = new Random().Next(150, 180)
+                    TotalLines = randomNumberGenerator.Next(240, 300),
+                    ExecutableLines = randomNumberGenerator.Next(200, 220),
+                    CoveredLines = randomNumberGenerator.Next(150, 180)
                 });
             }
             Console.WriteLine(watch.ElapsedMilliseconds);
 
-            string filepath = string.Format(@"F:\test\{1}\FileCoverageFact-default-{0}.csv", DateTime.Now.ToString("yyyyMMddHHmmssfff"), repoName);
+            Directory.CreateDirectory(string.Format(@"C:\AnalyticsPlayground\Data\{0}", repoName));
+            string filepath = string.Format(@"C:\AnalyticsPlayground\Data\{1}\FileCoverageFact-default-{0}.csv", DateTime.Now.ToString("yyyyMMddHHmmssfff"), repoName);
 
             using (var fileStream = new StreamWriter(filepath))
             {
@@ -60,7 +59,7 @@ namespace db_connect
                 {
                     var sqlTimeStamp = DateTime.Now.ToString("yyyyMMdd");
 
-                    var buildId = new Random().Next(0, 100000);
+                    var buildId = randomNumberGenerator.Next(0, 100000);
                     var watch2 = Stopwatch.StartNew();
                     foreach (var file in files)
                     {
@@ -85,16 +84,16 @@ namespace db_connect
                 }
             }
 
-            for (int day = 0; day < 7; ++day)
+            for (int day = 0; day < 30; ++day)
             {
                 var sqlTimeStamp = Convert.ToInt32(DateTime.Now.ToString("yyyyMMdd")) + day + 1;
-                filepath = string.Format(@"F:\test\{2}\FileCoverageFact-{0}-{1}.csv", day, DateTime.Now.ToString("yyyyMMddHHmmssfff"), repoName);
+                filepath = string.Format(@"C:\AnalyticsPlayground\Data\{2}\FileCoverageFact-{0}-{1}.csv", day, DateTime.Now.ToString("yyyyMMddHHmmssfff"), repoName);
                 using (var fileStream = new StreamWriter(filepath))
                 {
                     fileStream.WriteLine("DateSK, FileSK, DurableFileSK, BuildPipeLineSK, BranchSK, ProjectSK, BuildID, CodeChurn, TotalLines, ExecutableLines, CoveredLines, FullPath");
                     fileStream.Flush();
 
-                    for (int build = 0; build <= 33; ++build)
+                    for (int build = 0; build <= 10; ++build)
                     {
                         for (int branch = 0; branch < 6; ++branch)
                         {
