@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace db_connect
 {
@@ -17,32 +18,59 @@ namespace db_connect
 
     public class FactTable
     {
-        public static void GenerateFacttable(string repoName)
-        {
-            const int ProjectSK = 12345;
-            const int BranchSK = 1234;
-            const int BuildPipeLineSK = 123;
 
+        public static void GenerateFactTableDataInParallel()
+        {
+            List<string> repos = new List<string>
+            {
+                "devdiv",
+                "roslyn",
+                "VSO",
+                "VSOWithSrc",
+                "VsTest"
+            };
+
+            int projectSk = 1000;
+            int branchSK = 10000;
+            int buildPipeLineSK = 10000;
+
+            var taskList = new List<Task>();
+
+            foreach (var repo in repos)
+            {
+                var task = new Task(() => GenerateFacttable(repo, projectSk, branchSK, buildPipeLineSK));
+                taskList.Add(task);
+                projectSk += 1;
+                branchSK += 10;
+                buildPipeLineSK += 10;
+            }
+
+            Task.WaitAll(taskList.ToArray());
+        }
+
+        public static void GenerateFacttable(string repoName, int projectSk, int startingBranchSK, int startingBuildPipeLineSK)
+        {
             Random randomNumberGenerator = new Random();
 
-            // read from file
-            var files = File.ReadAllLines($"{repoName}.txt");
-
             Dictionary<string, FileProps> durableSK = new Dictionary<string, FileProps>();
-
             long gFileSK = 0;
+
+            // read from file
+            var files = File.ReadAllLines($"{repoName}.txt"); 
+
             var watch = Stopwatch.StartNew();
             foreach (var file in files)
             {
                 durableSK.Add(file, new FileProps
                 {
                     FileSK = gFileSK++,
-                    FileDurableSK = gFileSK-1,
+                    FileDurableSK = gFileSK - 1,
                     TotalLines = randomNumberGenerator.Next(240, 300),
                     ExecutableLines = randomNumberGenerator.Next(200, 220),
                     CoveredLines = randomNumberGenerator.Next(150, 180)
                 });
             }
+
             Console.WriteLine(watch.ElapsedMilliseconds);
 
             Directory.CreateDirectory(string.Format(@"C:\AnalyticsPlayground\Data\{0}", repoName));
@@ -50,10 +78,10 @@ namespace db_connect
 
             using (var fileStream = new StreamWriter(filepath))
             {
-                fileStream.WriteLine("DateSK, FileSK, DurableFileSK, BuildPipeLineSK, BranchSK, ProjectSK, BuildID, CodeChurn, TotalLines, ExecutableLines, CoveredLines, FullPath");
+                fileStream.WriteLine("DateSK,FileSK,DurableFileSK,BuildPipeLineSK,BranchSK,ProjectSK,BuildID,CodeChurn,TotalLines,ExecutableLines,CoveredLines,FullPath");
                 fileStream.Flush();
 
-                for (int branch = 0; branch < 6; ++branch)
+                for (int branch = 0; branch < 10; ++branch)
                 {
                     var sqlTimeStamp = DateTime.Now.ToString("yyyyMMdd");
 
@@ -61,13 +89,13 @@ namespace db_connect
                     var watch2 = Stopwatch.StartNew();
                     foreach (var file in files)
                     {
-                        var line = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}",
+                        var line = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}",
                             sqlTimeStamp,
                             durableSK[file].FileSK,
                             durableSK[file].FileDurableSK,
-                            BuildPipeLineSK + ((branch % 2 == 0) ? 0 : branch),
-                            BranchSK + ((branch % 2 == 0) ? 0 : branch),
-                            ProjectSK,
+                            startingBuildPipeLineSK + ((branch % 2 == 0) ? 0 : branch),
+                            startingBranchSK + ((branch % 2 == 0) ? 0 : branch),
+                            projectSk,
                             buildId,
                             0,
                             durableSK[file].TotalLines,
@@ -88,10 +116,10 @@ namespace db_connect
                 filepath = string.Format(@"C:\AnalyticsPlayground\Data\{2}\FileCoverageFact-{0}-{1}.csv", day, DateTime.Now.ToString("yyyyMMddHHmmssfff"), repoName);
                 using (var fileStream = new StreamWriter(filepath))
                 {
-                    fileStream.WriteLine("DateSK, FileSK, DurableFileSK, BuildPipeLineSK, BranchSK, ProjectSK, BuildID, CodeChurn, TotalLines, ExecutableLines, CoveredLines, FullPath");
+                    fileStream.WriteLine("DateSK,FileSK,DurableFileSK,BuildPipeLineSK,BranchSK,ProjectSK,BuildID,CodeChurn,TotalLines,ExecutableLines,CoveredLines,FullPath");
                     fileStream.Flush();
 
-                    for (int build = 0; build <= 10; ++build)
+                    for (int build = 0; build <= 25; ++build)
                     {
                         for (int branch = 0; branch < 6; ++branch)
                         {
@@ -124,19 +152,19 @@ namespace db_connect
 
                             foreach (var file in tempFiles)
                             {
-                                var line = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}",
+                                var line = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}",
                                     sqlTimeStamp,
                                     durableSK[file].FileSK,
                                     durableSK[file].FileDurableSK,
-                                    BuildPipeLineSK + ((branch % 2 == 0) ? 0 : branch),
-                                    BranchSK + ((branch % 2 == 0) ? 0 : branch),
-                                    ProjectSK,
+                                    startingBuildPipeLineSK + ((branch % 2 == 0) ? 0 : branch),
+                                    startingBranchSK + ((branch % 2 == 0) ? 0 : branch),
+                                    projectSk,
                                     buildId,
                                     codeChurn,
                                     //files.Contains(file) ? 0 : codeChurn,
-                                    durableSK[file].TotalLines,
-                                    durableSK[file].ExecutableLines,
-                                    durableSK[file].CoveredLines,
+                                    randomNumberGenerator.Next(240, 300),
+                                    randomNumberGenerator.Next(200, 220),
+                                    randomNumberGenerator.Next(150, 180),
                                     file);
 
                                 fileStream.WriteLine(line);
